@@ -17,7 +17,7 @@ fs_skeleton.tbz2
 )
 
 toolchain=(
-https://sourcery.mentor.com/GNUToolchain/package6488/public/arm-none-linux-gnueabi/arm-2010q1-202-arm-none-linux-gnueabi-i686-pc-linux-gnu.tar.bz2
+https://sourcery.mentor.com/GNUToolchain/package11447/public/arm-none-linux-gnueabi/arm-2013.05-24-arm-none-linux-gnueabi-i686-pc-linux-gnu.tar.bz2
 )
 
 paths=(
@@ -56,7 +56,7 @@ repositories=(
 
 kernel
 https://github.com/ariknem/linux.git
-dt-3.8.y
+dt-3.12.y
 
 openssl
 https://github.com/ariknem/openssl.git

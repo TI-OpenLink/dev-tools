@@ -52,7 +52,7 @@ function assert_no_error()
 		echo "****** ERROR $? $@*******"
 		exit 1
 	fi
-    echo "****** $1 *******"
+    #echo "****** $1 *******"
 }
 
 function repo_id()
@@ -189,7 +189,18 @@ function setup_toolchain()
 		wget ${toolchain[0]} -O `path downloads`/arm-toolchain.tar.bz2
 		tar -xjf `path downloads`/arm-toolchain.tar.bz2 -C `path toolchain`
 		mv `path toolchain`/* `path toolchain`/arm
-	fi
+	else
+        echo "Verifying toolchain version"
+        `path toolchain`/arm/bin/arm-none-linux-gnueabi-gcc --version | grep 4.7.3
+        if [ $? -eq 1 ]; then
+            echo "Updating toolchain"
+            rm `path toolchain`/*
+            rm `path downloads`/arm-toolchain.tar.bz2
+            wget ${toolchain[0]} -O `path downloads`/arm-toolchain.tar.bz2
+            tar -xjf `path downloads`/arm-toolchain.tar.bz2 -C `path toolchain`
+            mv `path toolchain`/* `path toolchain`/arm
+        fi        
+    fi    
 }
 
 function build_uimage()
@@ -198,7 +209,7 @@ function build_uimage()
 	[ -z $NO_CONFIG ] && cp `path configuration`/kernel.config `repo_path kernel`/.config
 	[ -z $NO_CLEAN ] && make clean
 	[ -z $NO_CLEAN ] && assert_no_error
-	make -j${PROCESSORS_NUMBER} uImage
+	LOADADDR=0x80008000 make -j${PROCESSORS_NUMBER} uImage
 	assert_no_error
 	LOADADDR=0x80008000 make -j${PROCESSORS_NUMBER} uImage-dtb.am335x-evm
 	assert_no_error
@@ -417,11 +428,11 @@ files_to_verify=(
 `repo_path fw_download`/wl18xx-fw-2.bin
 "data"
 
-`path filesystem`/lib/modules/3.8.*/extra/drivers/net/wireless/ti/wl18xx/wl18xx.ko
+`path filesystem`/lib/modules/3.12.*/extra/drivers/net/wireless/ti/wl18xx/wl18xx.ko
 `repo_path compat_wireless`/drivers/net/wireless/ti/wl18xx/wl18xx.ko
 "ELF 32-bit LSB relocatable, ARM"
 
-`path filesystem`/lib/modules/3.8.13+/extra/drivers/net/wireless/ti/wlcore/wlcore.ko
+`path filesystem`/lib/modules/3.12.*/extra/drivers/net/wireless/ti/wlcore/wlcore.ko
 `repo_path compat_wireless`/drivers/net/wireless/ti/wlcore/wlcore.ko
 "ELF 32-bit LSB relocatable, ARM"
 
@@ -474,11 +485,14 @@ function verify_skeleton()
 		source_path=${files_to_verify[i + 1]}
 		file_pattern=${files_to_verify[i + 2]}
 		file $skeleton_path | grep "${file_pattern}" >/dev/null
-		assert_no_error 
+        if [ $? -eq 1 ]; then
+            echo -e "${RED}ERROR " $skeleton_path " Not found ! ${NORMAL}"
+            exit
+        fi
 
 		md5_skeleton=$(md5sum $skeleton_path | awk '{print $1}')
 		md5_source=$(md5sum $source_path     | awk '{print $1}')
-		if [ $md5_skeleton != $md5_source ]; then
+        if [ $md5_skeleton != $md5_source ]; then
 			echo "ERROR: file mismatch"
 			echo $skeleton_path
 			exit 1
