@@ -54,9 +54,9 @@ repositories=(
 # url
 # branch
 
-kernel
-https://github.com/ariknem/linux.git
-dt-3.12.y
+kernel_lcpd
+git@git.ti.com:wilink8-wlan/wilink8-wlan-ti-linux-kernel.git
+ti-linux-3.12.y-wlcore_eco 
 
 openssl
 https://github.com/ariknem/openssl.git

@@ -113,7 +113,7 @@ function setup_environment()
 	export PKG_CONFIG_PATH=`path filesystem`/lib/pkgconfig
 	export INSTALL_PREFIX=`path filesystem`
 	export LIBNL_PATH=`repo_path libnl`
-	export KERNEL_PATH=`repo_path kernel`
+	export KERNEL_PATH=`repo_path kernel_lcpd`
 	export KLIB=${KERNEL_PATH}
 	export KLIB_BUILD=${KERNEL_PATH}
 	export GIT_TREE=`repo_path driver`
@@ -147,12 +147,13 @@ function setup_directories()
 
 function setup_repositories()
 {
+echo "here !!!!"
 	i="0"
 	while [ $i -lt ${#repositories[@]} ]; do
 		url=${repositories[$i + 1]}
 		name=${repositories[$i]}
         echo -e "${NORMAL}Cloning into: ${GREEN} $name "       
-		[ ! -d `repo_path $name` ] && git clone $url `repo_path $name`
+		[ ! -d `repo_path $name` ] && [ "$name" == "kernel_lcpd" ] && git clone $url `repo_path $name`
 		i=$[$i + 3]
 	done        
 
@@ -205,35 +206,24 @@ function setup_toolchain()
 
 function build_uimage()
 {
-	cd_repo kernel
-	[ -z $NO_CONFIG ] && cp `path configuration`/kernel.config `repo_path kernel`/.config
+	cd_repo kernel_lcpd
+	[ -z $NO_CONFIG ] && cp `path configuration`/kernel.config `repo_path kernel_lcpd`/.config
 	[ -z $NO_CLEAN ] && make clean
 	[ -z $NO_CLEAN ] && assert_no_error
 	LOADADDR=0x80008000 make -j${PROCESSORS_NUMBER} uImage
 	assert_no_error
 	LOADADDR=0x80008000 make -j${PROCESSORS_NUMBER} uImage-dtb.am335x-evm
 	assert_no_error
-	cp `repo_path kernel`/arch/arm/boot/uImage-dtb.am335x-evm `path tftp`/uImage
+	cp `repo_path kernel_lcpd`/arch/arm/boot/uImage-dtb.am335x-evm `path tftp`/uImage
 	cd_back
 }
 
 function build_modules()
 {
-	cd_repo compat_wireless
-	if [ -z $NO_CLEAN ]; then
-		#git reset --hard HEAD
-		make clean
-		#assert_no_error
-		rm .compat* MAINTAINERS Makefile.bk .compat_autoconf_
-	fi
-	[ -z $NO_CONFIG ] && ./scripts/admin-refresh.sh network
-	[ -z $NO_CONFIG ] && ./scripts/driver-select wl18xx
-	make -j${PROCESSORS_NUMBER} 
-	assert_no_error
-	find . -name \*.ko -exec cp {} `path debugging`/ \;
-	find . -name \*.ko -exec ${CROSS_COMPILE}strip -g {} \;
-    
-	make -C ${KERNEL_PATH} M=`pwd` "INSTALL_MOD_PATH=`path filesystem`" modules_install
+	cd `repo_path kernel_lcpd`		
+    make -j${PROCESSORS_NUMBER}  modules 
+    assert_no_error
+    make -C ${KERNEL_PATH} M=`pwd` "INSTALL_MOD_PATH=`path filesystem`" modules_install
 	assert_no_error
 	#chmod -R 0777 ${PATH__FILESYSTEM}/lib/modules/
 	cd_back
