@@ -207,7 +207,7 @@ function setup_toolchain()
 function build_uimage()
 {
 	cd_repo kernel_lcpd
-	[ -z $NO_CONFIG ] && cp `path configuration`/kernel.config `repo_path kernel_lcpd`/.config
+	#[ -z $NO_CONFIG ] && cp `path configuration`/kernel.config `repo_path kernel_lcpd`/.config
 	[ -z $NO_CLEAN ] && make clean
 	[ -z $NO_CLEAN ] && assert_no_error
 	LOADADDR=0x80008000 make -j${PROCESSORS_NUMBER} uImage
@@ -618,6 +618,10 @@ function main()
 		;;
         
         ############################################################
+        'get_tag')        
+		get_tag 
+		;;
+        
 		'admin_tag')        
 		admin_tag $2
 		;;
