@@ -153,7 +153,7 @@ echo "here !!!!"
 		url=${repositories[$i + 1]}
 		name=${repositories[$i]}
         echo -e "${NORMAL}Cloning into: ${GREEN} $name "       
-		[ ! -d `repo_path $name` ] && [ "$name" == "kernel_lcpd" ] && git clone $url `repo_path $name`
+		[ ! -d `repo_path $name` ] && git clone $url `repo_path $name`
 		i=$[$i + 3]
 	done        
 
