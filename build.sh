@@ -217,18 +217,22 @@ function build_uimage()
 	cd_back
 }
 
+function generate_compat()
+{
+        cd_repo backports
+        python ./gentree.py --clean `repo_path driver` `path compat_wireless`
+        cd_back
+}
+
 function build_modules()
 {
+        generate_compat
 	cd_repo compat_wireless
 	if [ -z $NO_CLEAN ]; then
-		#git reset --hard HEAD
 		make clean
-		#assert_no_error
-		rm .compat* MAINTAINERS Makefile.bk .compat_autoconf_
 	fi
-	[ -z $NO_CONFIG ] && ./scripts/admin-refresh.sh network
-	[ -z $NO_CONFIG ] && ./scripts/driver-select wl18xx
-	make -j${PROCESSORS_NUMBER} 
+	make defconfig-wl18xx
+        make -j${PROCESSORS_NUMBER} 
 	assert_no_error
 	find . -name \*.ko -exec cp {} `path debugging`/ \;
 	find . -name \*.ko -exec ${CROSS_COMPILE}strip -g {} \;
@@ -429,11 +433,11 @@ files_to_verify=(
 "data"
 
 `path filesystem`/lib/modules/3.12.*/extra/drivers/net/wireless/ti/wl18xx/wl18xx.ko
-`repo_path compat_wireless`/drivers/net/wireless/ti/wl18xx/wl18xx.ko
+`path compat_wireless`/drivers/net/wireless/ti/wl18xx/wl18xx.ko
 "ELF 32-bit LSB relocatable, ARM"
 
 `path filesystem`/lib/modules/3.12.*/extra/drivers/net/wireless/ti/wlcore/wlcore.ko
-`repo_path compat_wireless`/drivers/net/wireless/ti/wlcore/wlcore.ko
+`path compat_wireless`/drivers/net/wireless/ti/wlcore/wlcore.ko
 "ELF 32-bit LSB relocatable, ARM"
 
 `path filesystem`/home/root/calibrator
@@ -523,7 +527,7 @@ function build_all()
         build_uimage
         build_openssl
         build_libnl
-        build_crda
+        #build_crda
     fi
     
     if [ -z $NO_OPENLINK ] 
