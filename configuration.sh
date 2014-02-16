@@ -58,43 +58,43 @@ repositories=(
 # branch
 
 kernel
-https://github.com/ariknem/linux.git
-dt-3.12.y
+git@git.ti.com:wilink8-wlan/wilink8-wlan-ti-linux-kernel.git
+ti-linux-3.8.y-wlcore
 
 openssl
 https://github.com/ariknem/openssl.git
 openssl_arm
 
 libnl
-https://github.com/ariknem/libnl.git
-libnl3_arm
+https://github.com/tgraf/libnl.git
+libnl3_2_24
 
 crda
 https://github.com/mcgrof/crda.git
-v1.1.3
+master
 
 wireless_regdb
 https://git.kernel.org/pub/scm/linux/kernel/git/linville/wireless-regdb.git
 master
 
 driver
-https://github.com/TI-OpenLink/wl18xx.git
+git@git.ti.com:wilink8-wlan/wl18xx.git
 ap_dfs
 
 hostap
-https://github.com/TI-OpenLink/hostap.git
-android_jb_mr1_39
+git@git.ti.com:wilink8-wlan/hostap.git
+single_hostap
 
 ti_utils
-https://github.com/TI-OpenLink/18xx-ti-utils.git
+git@git.ti.com:wilink8-wlan/18xx-ti-utils.git
 master
 
 fw_download
-https://github.com/TI-OpenLink/wl18xx_fw.git
+git@git.ti.com:wilink8-wlan/wl18xx_fw.git
 mbss
 
 scripts_download
-https://github.com/TI-OpenLink/wl12xx_target_scripts.git
+git@git.ti.com:wilink8-wlan/wl18xx-target-scripts.git
 sitara-mbss
 
 backports
