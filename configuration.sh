@@ -17,7 +17,7 @@ fs_skeleton.tbz2
 )
 
 toolchain=(
-https://sourcery.mentor.com/GNUToolchain/package6488/public/arm-none-linux-gnueabi/arm-2010q1-202-arm-none-linux-gnueabi-i686-pc-linux-gnu.tar.bz2
+https://sourcery.mentor.com/GNUToolchain/package11447/public/arm-none-linux-gnueabi/arm-2013.05-24-arm-none-linux-gnueabi-i686-pc-linux-gnu.tar.bz2
 )
 
 paths=(
@@ -42,9 +42,6 @@ ${PATH__ROOT}/downloads
 src
 ${PATH__ROOT}/src
 
-compat_wireless
-${PATH__ROOT}/src/compat_wireless
-
 debugging
 ${PATH__ROOT}/debugging
 
@@ -57,47 +54,52 @@ repositories=(
 # url
 # branch
 
-kernel
-git://git.ti.com/wilink8-wlan/wilink8-wlan-ti-linux-kernel.git
-ti-linux-3.2.y-AM335x-PSP
+kernel_lcpd
+git@git.ti.com:wilink8-wlan/wilink8-wlan-ti-linux-kernel.git
+ti-linux-3.12.y-wlcore_eco 
 
 openssl
 https://github.com/ariknem/openssl.git
 openssl_arm
 
 libnl
-https://github.com/tgraf/libnl.git
-libnl3_2_24
+https://github.com/ariknem/libnl.git
+libnl3_arm
 
 crda
-git://git.ti.com/wilink8-wlan/crda.git
-master
+https://github.com/mcgrof/crda.git
+v1.1.3
 
 wireless_regdb
 https://git.kernel.org/pub/scm/linux/kernel/git/linville/wireless-regdb.git
 master
 
 driver
-git://git.ti.com/wilink8-wlan/wl18xx.git
-ap_dfs_32
+https://github.com/TI-OpenLink/wl18xx.git
+upstream_312_mbss
 
 hostap
-git://git.ti.com/wilink8-wlan/hostap.git
-single_hostap
+https://github.com/TI-OpenLink/hostap.git
+android_jb_mr1_39
+
+compat
+https://github.com/TI-OpenLink/compat.git
+upstream_312
+
+compat_wireless
+https://github.com/TI-OpenLink/compat-wireless.git
+upstream_312
 
 ti_utils
-git://git.ti.com/wilink8-wlan/18xx-ti-utils.git
+https://github.com/TI-OpenLink/18xx-ti-utils.git
 master
 
 fw_download
-git://git.ti.com/wilink8-wlan/wl18xx_fw.git
-ap_dfs
+https://github.com/TI-OpenLink/wl18xx_fw.git
+mbss
 
 scripts_download
-git://git.ti.com/wilink8-wlan/wl18xx-target-scripts.git
+https://github.com/TI-OpenLink/wl12xx_target_scripts.git
 sitara-mbss
 
-backports
-git://git.ti.com/wilink8-wlan/backports.git
-ap_dfs_32
 )

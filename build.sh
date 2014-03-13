@@ -36,10 +36,12 @@ function usage ()
     echo "                     scripts "
     echo "                     calibrator "
     echo "                     wlconf "
+    echo "                     calibrator "
+    echo "                      "
     echo "                     uimage "
     echo "                     openssl "
     echo "                     libnl "
-    echo "                     crda "
+    echo "                     crda "    
 
 	exit 1
 }
@@ -50,7 +52,7 @@ function assert_no_error()
 		echo "****** ERROR $? $@*******"
 		exit 1
 	fi
-    echo "****** $1 *******"
+    #echo "****** $1 *******"
 }
 
 function repo_id()
@@ -111,7 +113,7 @@ function setup_environment()
 	export PKG_CONFIG_PATH=`path filesystem`/lib/pkgconfig
 	export INSTALL_PREFIX=`path filesystem`
 	export LIBNL_PATH=`repo_path libnl`
-	export KERNEL_PATH=`repo_path kernel`
+	export KERNEL_PATH=`repo_path kernel_lcpd`
 	export KLIB=${KERNEL_PATH}
 	export KLIB_BUILD=${KERNEL_PATH}
 	export GIT_TREE=`repo_path driver`
@@ -122,14 +124,14 @@ function setup_environment()
 
 function setup_filesystem_skeleton()
 {
-	mkdir -p `path filesystem`/usr/bin
+	mkdir -p `path filesystem`/home/root
 	mkdir -p `path filesystem`/etc
 	mkdir -p `path filesystem`/usr/lib/crda
 	mkdir -p `path filesystem`/lib/firmware/ti-connectivity
 	mkdir -p `path filesystem`/usr/share/wl18xx
 	mkdir -p `path filesystem`/usr/sbin/wlconf
 	mkdir -p `path filesystem`/usr/sbin/wlconf/official_inis
-        mkdir -p `path filesystem`/etc/wireless-regdb/pubkeys
+    mkdir -p `path filesystem`/etc/wireless-regdb/pubkeys
 }
 
 function setup_directories()
@@ -145,12 +147,13 @@ function setup_directories()
 
 function setup_repositories()
 {
+echo "here !!!!"
 	i="0"
 	while [ $i -lt ${#repositories[@]} ]; do
 		url=${repositories[$i + 1]}
 		name=${repositories[$i]}
         echo -e "${NORMAL}Cloning into: ${GREEN} $name "       
-		[ ! -d `repo_path $name` ] && git clone $url `repo_path $name`
+		[ ! -d `repo_path $name` ] && [ "$name" == "kernel_lcpd" ] && git clone $url `repo_path $name`
 		i=$[$i + 3]
 	done        
 
@@ -170,7 +173,7 @@ function setup_branches()
 		git checkout $branch        
         git fetch origin
         git fetch origin --tags  
-        if [[ "$url" == *git.ti.com* ]]
+        if [[ "$url" == *TI-OpenLink* ]]
         then            
            [[ -n $RESET ]] && echo -e "${PURPLE}Reset to latest in repo ${GREEN}$name ${NORMAL} branch  ${GREEN}$branch ${NORMAL}"  && git reset --hard origin/$branch
            [[ -n $USE_TAG ]] && git reset --hard $USE_TAG  && echo -e "${NORMAL}Reset to tag ${GREEN}$USE_TAG   ${NORMAL}in repo ${GREEN}$name ${NORMAL} "            
@@ -187,44 +190,40 @@ function setup_toolchain()
 		wget ${toolchain[0]} -O `path downloads`/arm-toolchain.tar.bz2
 		tar -xjf `path downloads`/arm-toolchain.tar.bz2 -C `path toolchain`
 		mv `path toolchain`/* `path toolchain`/arm
-	fi
+	else
+        echo "Verifying toolchain version"
+        `path toolchain`/arm/bin/arm-none-linux-gnueabi-gcc --version | grep 4.7.3
+        if [ $? -eq 1 ]; then
+            echo "Updating toolchain"
+            rm `path toolchain`/*
+            rm `path downloads`/arm-toolchain.tar.bz2
+            wget ${toolchain[0]} -O `path downloads`/arm-toolchain.tar.bz2
+            tar -xjf `path downloads`/arm-toolchain.tar.bz2 -C `path toolchain`
+            mv `path toolchain`/* `path toolchain`/arm
+        fi        
+    fi    
 }
 
 function build_uimage()
 {
-	cd_repo kernel
-	[ -z $NO_CONFIG ] && cp `path configuration`/kernel.config `repo_path kernel`/.config
+	cd_repo kernel_lcpd
+	[ -z $NO_CONFIG ] && cp `path configuration`/kernel.config `repo_path kernel_lcpd`/.config
 	[ -z $NO_CLEAN ] && make clean
 	[ -z $NO_CLEAN ] && assert_no_error
-	make -j${PROCESSORS_NUMBER} uImage
+	LOADADDR=0x80008000 make -j${PROCESSORS_NUMBER} uImage
 	assert_no_error
-	#LOADADDR=0x80008000 make -j${PROCESSORS_NUMBER} uImage-dtb.am335x-evm
+	LOADADDR=0x80008000 make -j${PROCESSORS_NUMBER} uImage-dtb.am335x-evm
 	assert_no_error
-	cp `repo_path kernel`/arch/arm/boot/uImage `path tftp`/uImage
+	cp `repo_path kernel_lcpd`/arch/arm/boot/uImage-dtb.am335x-evm `path tftp`/uImage
 	cd_back
-}
-
-function generate_compat()
-{
-        cd_repo backports
-        python ./gentree.py --clean `repo_path driver` `path compat_wireless`
-        cd_back
 }
 
 function build_modules()
 {
-    generate_compat
-	cd_repo compat_wireless
-	if [ -z $NO_CLEAN ]; then
-		make clean
-	fi
-	make defconfig-wl18xx
-    make -j${PROCESSORS_NUMBER} 
-	assert_no_error
-	find . -name \*.ko -exec cp {} `path debugging`/ \;
-	find . -name \*.ko -exec ${CROSS_COMPILE}strip -g {} \;
-    
-	make -C ${KERNEL_PATH} M=`pwd` "INSTALL_MOD_PATH=`path filesystem`" modules_install
+	cd `repo_path kernel_lcpd`		
+    make -j${PROCESSORS_NUMBER}  modules 
+    assert_no_error
+    make -C ${KERNEL_PATH} M=`pwd` "INSTALL_MOD_PATH=`path filesystem`" modules_install
 	assert_no_error
 	#chmod -R 0777 ${PATH__FILESYSTEM}/lib/modules/
 	cd_back
@@ -261,11 +260,11 @@ function build_wpa_supplicant()
 {
 	cd `repo_path hostap`/wpa_supplicant
 	[ -z $NO_CONFIG ] && cp android.config .config
-	CONFIG_LIBNL32=y DESTDIR=`path filesystem` make clean
+	DESTDIR=`path filesystem` make clean
 	assert_no_error
-	CONFIG_LIBNL32=y DESTDIR=`path filesystem` CFLAGS+="-I`path filesystem`/usr/local/ssl/include -I`repo_path libnl`/include" LIBS+="-L`path filesystem`/lib -L`path filesystem`/usr/local/ssl/lib -lssl -lcrypto -lm -ldl -lpthread" LIBS_p+="-L`path filesystem`/lib -L`path filesystem`/usr/local/ssl/lib -lssl -lcrypto -lm -ldl -lpthread" make -j${PROCESSORS_NUMBER} CC=${CROSS_COMPILE}gcc LD=${CROSS_COMPILE}ld AR=${CROSS_COMPILE}ar
+	DESTDIR=`path filesystem` CFLAGS+="-I`path filesystem`/usr/local/ssl/include -I`path filesystem`/include" LIBS+="-L`path filesystem`/lib -L`path filesystem`/usr/local/ssl/lib -lssl -lcrypto -lm -ldl" LIBS_p+="-L`path filesystem`/lib -L`path filesystem`/usr/local/ssl/lib -lssl -lcrypto -lm -ldl" make -j${PROCESSORS_NUMBER} CC=${CROSS_COMPILE}gcc LD=${CROSS_COMPILE}ld AR=${CROSS_COMPILE}ar
 	assert_no_error
-	CONFIG_LIBNL32=y DESTDIR=`path filesystem` make install
+	DESTDIR=`path filesystem` make install
 	assert_no_error
 	cd_back    
     cp `repo_path scripts_download`/conf/*_supplicant.conf  `path filesystem`/etc/
@@ -275,11 +274,11 @@ function build_hostapd()
 {	       
     cd `repo_path hostap`/hostapd
 	[ -z $NO_CONFIG ] && cp android.config .config
-	CONFIG_LIBNL32=y DESTDIR=`path filesystem` make clean
+	DESTDIR=`path filesystem` make clean
 	assert_no_error
-	CONFIG_LIBNL32=y DESTDIR=`path filesystem` CFLAGS+="-I`path filesystem`/usr/local/ssl/include -I`repo_path libnl`/include" LIBS+="-L`path filesystem`/lib -L`path filesystem`/usr/local/ssl/lib -lssl -lcrypto -lm -ldl -lpthread" LIBS_p+="-L`path filesystem`/lib -L`path filesystem`/usr/local/ssl/lib -lssl -lcrypto -lm -ldl -lpthread" make -j${PROCESSORS_NUMBER} CC=${CROSS_COMPILE}gcc LD=${CROSS_COMPILE}ld AR=${CROSS_COMPILE}ar
+	DESTDIR=`path filesystem` CFLAGS+="-I`path filesystem`/usr/local/ssl/include -I`path filesystem`/include" LIBS+="-L`path filesystem`/lib -L`path filesystem`/usr/local/ssl/lib -lssl -lcrypto -lm -ldl" LIBS_p+="-L`path filesystem`/lib -L`path filesystem`/usr/local/ssl/lib -lssl -lcrypto -lm -ldl" make -j${PROCESSORS_NUMBER} CC=${CROSS_COMPILE}gcc LD=${CROSS_COMPILE}ld AR=${CROSS_COMPILE}ar
 	assert_no_error
-	CONFIG_LIBNL32=y DESTDIR=`path filesystem` make install
+	DESTDIR=`path filesystem` make install
 	assert_no_error
 	cd_back
     cp `repo_path scripts_download`/conf/hostapd.conf  `path filesystem`/etc/    
@@ -293,10 +292,10 @@ function build_crda()
 	
 	[ -z $NO_CLEAN ] && DESTDIR=`path filesystem` make clean
 	[ -z $NO_CLEAN ] && assert_no_error
-        PKG_CONFIG_LIBDIR="`path filesystem`/lib/pkgconfig" PKG_CONFIG_PATH="`path filesystem`/usr/local/ssl/lib/pkgconfig" DESTDIR=`path filesystem` CFLAGS+="-I`path filesystem`/usr/local/ssl/include -I`path filesystem`/include -L`path filesystem`/usr/local/ssl/lib -L`path filesystem`/lib" LDLIBS+=-lpthread V=1 USE_OPENSSL=1 make -j${PROCESSORS_NUMBER} all_noverify CC=${CROSS_COMPILE}gcc LD=${CROSS_COMPILE}ld AR=${CROSS_COMPILE}ar
+	DESTDIR=`path filesystem` NLLIBS="-lnl -lnl-genl" NLLIBNAME=libnl-3.0 CFLAGS+="-I`path filesystem`/usr/local/ssl/include -I`path filesystem`/include -L`path filesystem`/usr/local/ssl/lib -L`path filesystem`/lib" LDLIBS+=-lm USE_OPENSSL=1 UDEV_RULE_DIR="etc/udev/rules.d/" make -j${PROCESSORS_NUMBER} all_noverify CC=${CROSS_COMPILE}gcc LD=${CROSS_COMPILE}ld AR=${CROSS_COMPILE}ar
 	assert_no_error
-        DESTDIR=`path filesystem` make install
-        assert_no_error
+	DESTDIR=`path filesystem` NLLIBS="-lnl -lnl-genl" NLLIBNAME=libnl-3.0 CFLAGS+="-I`path filesystem`/usr/local/ssl/include -I`path filesystem`/include -L`path filesystem`/usr/local/ssl/lib -L`path filesystem`/lib" LDLIBS+=-lm USE_OPENSSL=1 UDEV_RULE_DIR="etc/udev/rules.d/" make -j${PROCESSORS_NUMBER} install CC=${CROSS_COMPILE}gcc LD=${CROSS_COMPILE}ld AR=${CROSS_COMPILE}ar
+	assert_no_error
 	cd_back
 }
 
@@ -305,7 +304,7 @@ function build_calibrator()
 	cd_repo ti_utils
 	[ -z $NO_CLEAN ] && NFSROOT=`path filesystem` make clean
 	[ -z $NO_CLEAN ] && assert_no_error
-	NLVER=3 NLROOT=`repo_path libnl`/include NFSROOT=`path filesystem` LIBS+=-lpthread make
+	NFSROOT=`path filesystem` make
 	assert_no_error
 	NFSROOT=`path filesystem` make install
 	#assert_no_error
@@ -314,7 +313,7 @@ function build_calibrator()
 
 function build_wlconf()
 {
-	files_to_copy="dictionary.txt struct.bin wl18xx-conf-default.bin README example.conf example.ini"
+	files_to_copy=(dictionary.txt struct.bin wl18xx-conf-default.bin README example.conf example.ini)
 	cd `repo_path ti_utils`/wlconf
 	if [ -z $NO_CLEAN ]; then
 		NFSROOT=`path filesystem` make clean
@@ -415,46 +414,26 @@ files_to_verify=(
 `repo_path wireless_regdb`/regulatory.bin
 "CRDA wireless regulatory database file"
 
-`path filesystem`/lib/firmware/ti-connectivity/wl18xx-fw-4.bin
-`repo_path fw_download`/wl18xx-fw-4.bin
+`path filesystem`/lib/firmware/ti-connectivity/wl18xx-fw-2.bin
+`repo_path fw_download`/wl18xx-fw-2.bin
 "data"
 
-`path filesystem`/lib/modules/3.2.*/extra/drivers/net/wireless/ti/wl18xx/wl18xx.ko
-`path compat_wireless`/drivers/net/wireless/ti/wl18xx/wl18xx.ko
+`path filesystem`/lib/modules/3.12.*/extra/drivers/net/wireless/ti/wl18xx/wl18xx.ko
+`repo_path compat_wireless`/drivers/net/wireless/ti/wl18xx/wl18xx.ko
 "ELF 32-bit LSB relocatable, ARM"
 
-`path filesystem`/lib/modules/3.2.*/extra/drivers/net/wireless/ti/wlcore/wlcore.ko
-`path compat_wireless`/drivers/net/wireless/ti/wlcore/wlcore.ko
+`path filesystem`/lib/modules/3.12.*/extra/drivers/net/wireless/ti/wlcore/wlcore.ko
+`repo_path compat_wireless`/drivers/net/wireless/ti/wlcore/wlcore.ko
 "ELF 32-bit LSB relocatable, ARM"
 
-#`path filesystem`/usr/bin/calibrator
-#`repo_path ti_utils`/calibrator
-#"ELF 32-bit LSB executable, ARM"
+`path filesystem`/home/root/calibrator
+`repo_path ti_utils`/calibrator
+"ELF 32-bit LSB executable, ARM"
 
 `path filesystem`/usr/sbin/wlconf/wlconf
 `repo_path ti_utils`/wlconf/wlconf
 "ELF 32-bit LSB executable, ARM"
 )
-
-function get_tag()
-{
-       i="0"
-       while [ $i -lt ${#repositories[@]} ]; do
-               name=${repositories[$i]}
-               url=${repositories[$i + 1]}
-        branch=${repositories[$i + 2]}
-        checkout_type="branch"
-        cd_repo $name
-        if [[ "$url" == *git.ti.com* ]]
-        then
-                echo -e "${PURPLE}Describe of ${NORMAL} repo : ${GREEN}$name ${NORMAL} "  ;
-                git describe
-        fi
-               cd_back
-               i=$[$i + 3]
-       done
-}
-
 
 
 function admin_tag()
@@ -466,7 +445,7 @@ function admin_tag()
         branch=${repositories[$i + 2]}   
         checkout_type="branch"              
         cd_repo $name    
-        if [[ "$url" == *git.ti.com* ]]
+        if [[ "$url" == *TI-OpenLink* ]]
         then                                   
                 echo -e "${PURPLE}Adding tag ${GREEN} $1 ${NORMAL} to repo : ${GREEN}$name ${NORMAL} "  ;
                 git show --summary        
@@ -497,13 +476,13 @@ function verify_skeleton()
 		file_pattern=${files_to_verify[i + 2]}
 		file $skeleton_path | grep "${file_pattern}" >/dev/null
         if [ $? -eq 1 ]; then
-        echo -e "${RED}ERROR " $skeleton_path " Not found ! ${NORMAL}"
-        #exit
+            echo -e "${RED}ERROR " $skeleton_path " Not found ! ${NORMAL}"
+            exit
         fi
 
 		md5_skeleton=$(md5sum $skeleton_path | awk '{print $1}')
 		md5_source=$(md5sum $source_path     | awk '{print $1}')
-		if [ $md5_skeleton != $md5_source ]; then
+        if [ $md5_skeleton != $md5_source ]; then
 			echo "ERROR: file mismatch"
 			echo $skeleton_path
 			exit 1
@@ -637,18 +616,9 @@ function main()
         print_highlight " Copying scripts "
 		build_scripts_download
 		;;
-        'utils')
-        print_highlight " building only ti-utils "
-        build_calibrator
-        build_wlconf		
-		;;        
+        
         ############################################################
-        'get_tag')
-        get_tag
-        exit
-        ;;
-		
-        'admin_tag')        
+		'admin_tag')        
 		admin_tag $2
 		;;
         
