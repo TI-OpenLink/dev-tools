@@ -198,9 +198,9 @@ function build_uimage()
 	[ -z $NO_CLEAN ] && assert_no_error
 	make -j${PROCESSORS_NUMBER} uImage
 	assert_no_error
-	#LOADADDR=0x80008000 make -j${PROCESSORS_NUMBER} uImage-dtb.am335x-evm
+	LOADADDR=0x80008000 make -j${PROCESSORS_NUMBER} uImage-dtb.am335x-evm
 	assert_no_error
-	cp `repo_path kernel`/arch/arm/boot/uImage `path tftp`/uImage
+	cp `repo_path kernel`/arch/arm/boot/uImage-dtb.am335x-evm `path tftp`/uImage
 	cd_back
 }
 
