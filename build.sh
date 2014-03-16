@@ -419,11 +419,11 @@ files_to_verify=(
 `repo_path fw_download`/wl18xx-fw-4.bin
 "data"
 
-`path filesystem`/lib/modules/3.2.*/extra/drivers/net/wireless/ti/wl18xx/wl18xx.ko
+`path filesystem`/lib/modules/3.12.*/extra/drivers/net/wireless/ti/wl18xx/wl18xx.ko
 `path compat_wireless`/drivers/net/wireless/ti/wl18xx/wl18xx.ko
 "ELF 32-bit LSB relocatable, ARM"
 
-`path filesystem`/lib/modules/3.2.*/extra/drivers/net/wireless/ti/wlcore/wlcore.ko
+`path filesystem`/lib/modules/3.12.*/extra/drivers/net/wireless/ti/wlcore/wlcore.ko
 `path compat_wireless`/drivers/net/wireless/ti/wlcore/wlcore.ko
 "ELF 32-bit LSB relocatable, ARM"
 
